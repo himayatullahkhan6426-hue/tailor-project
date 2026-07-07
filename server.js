@@ -8,13 +8,14 @@ app.use(express.json());
 
 // MySQL Connection (Docker Port 3307 ke saath)
 // MySQL Connection - Docker Internal Network ke liye compatible
+// MySQL Cloud Connection (Aiven Cloud Database)
 const db = mysql.createConnection({
-    // Agar Render (Docker) par chal raha ho to service name 'db' use hoga, warna localhost
-    host: process.env.DATABASE_HOST || 'db', 
-    user: 'root',
-    password: 'rootpassword',
-    database: 'tailor_saas_db',
-    port: 3306 // Docker container ke andar ka asli port 3306 hi hota hai
+    host: 'mysql-1bc61be1-himayatullahkhan6426-1b92.j.aivencloud.com', // Eg: mysql-tailor-xyz.aivencloud.com
+    user: 'avnadmin', // Aiven ka username
+    password: 'AVNS_wq59fPQf_SLuCNuiuhZ', // Aiven ka password
+    database: 'defaultdb', // Aiven ka default database name
+    port: 19798, // Aiven ka port (jo bhi wahan likha ho, aam tor par 24000-26000 ke beech hota hai)
+    ssl: { rejectUnauthorized: false } // Cloud connections ke liye SSL zaroori hota hai
 });
 
 db.connect((err) => {
