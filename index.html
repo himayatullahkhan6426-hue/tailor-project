@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Tailor SaaS Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 20px; color: #1e293b; }
+        .container { max-width: 900px; margin: 0 auto; }
+        header { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        h2 { margin-top: 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
+        label { display: block; margin: 10px 0 5px; font-weight: bold; }
+        input, select { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box; }
+        button { background: #2563eb; color: white; border: none; padding: 12px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; }
+        button:hover { background: #1d4ed8; }
+        
+        /* SCREEN PAR RECEIPT DIKHANE KE LIYE */
+        .preview-box { background: #fffde7; border: 2px dashed #f59e0b; padding: 15px; font-family: monospace; border-radius: 4px; margin-top: 15px; }
+        .receipt-header { text-align: center; font-weight: bold; }
+        .receipt-divider { border-top: 1px dashed black; margin: 10px 0; }
+
+        /* PRINTING RULE */
+        @media print {
+            body * { display: none; }
+            #thermal-receipt, #thermal-receipt * { display: block; }
+            #thermal-receipt { width: 80mm; position: absolute; left: 0; top: 0; padding: 10px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h2>TailorFlow Multi-Tenant SaaS</h2>
+        <span style="background: #dbeafe; color: #2563eb; padding: 5px 10px; border-radius: 20px; font-weight: bold;">Docker DB Live</span>
+    </header>
+
+    <div class="grid">
+        <div class="card">
+            <h2>Order & Measurements</h2>
+            <form id="orderForm">
+                <label>Select Shop (Tenant)</label>
+                <select id="tenantId">
+                    <option value="1">Elite Tailors Ltd.</option>
+                    <option value="2">Royal Stitching</option>
+                </select>
+
+                <label>Customer Name</label>
+                <input type="text" id="custName" placeholder="Ali Khan" required>
+
+                <label>Phone</label>
+                <input type="text" id="custPhone" placeholder="03001234567" required>
+
+                <label>Cloth Type</label>
+                <select id="clothType">
+                    <option value="Premium Suit">Premium Suit</option>
+                    <option value="Slim Fit Shirt">Slim Fit Shirt</option>
+                </select>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div><label>Neck (Inches)</label><input type="number" id="mNeck" value="16"></div>
+                    <div><label>Chest (Inches)</label><input type="number" id="mChest" value="40"></div>
+                </div>
+
+                <label>Price ($)</label>
+                <input type="number" id="orderPrice" value="150" required>
+
+                <button type="submit">Save & Print Receipt</button>
+            </form>
+        </div>
+
+        <div class="card">
+            <h2>Thermal Receipt Preview</h2>
+            <div id="thermal-receipt" class="preview-box">
+                <div class="receipt-header">
+                    <h3>TAILOR SAAS SYSTEM</h3>
+                    <p>Docker Database Terminal</p>
+                </div>
+                <div class="receipt-divider"></div>
+                <p><strong>Order ID:</strong> #<span id="rcptId">----</span></p>
+                <p><strong>Date:</strong> <span id="rcptDate">--/--/----</span></p>
+                <p><strong>Customer:</strong> <span id="rcptName">Waiting...</span></p>
+                <div class="receipt-divider"></div>
+                <p><strong>Specs:</strong> <span id="rcptSpecs">No measurements yet</span></p>
+                <div class="receipt-divider"></div>
+                <p><strong>TOTAL AMOUNT:</strong> $<span id="rcptPrice">0.00</span></p>
+                <div class="receipt-divider"></div>
+                <p style="text-align: center; font-size: 10px;">Data Saved Successfully inside Docker!</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('orderForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const payload = {
+            tenant_id: document.getElementById('tenantId').value,
+            name: document.getElementById('custName').value,
+            phone: document.getElementById('custPhone').value,
+            item: document.getElementById('clothType').value,
+            neck: document.getElementById('mNeck').value,
+            chest: document.getElementById('mChest').value,
+            price: document.getElementById('orderPrice').value
+        };
+
+        fetch('http://localhost:3000/api/orders', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.success) {
+                // Screen par receipt ka data fill karna
+                document.getElementById('rcptId').innerText = data.orderId;
+                document.getElementById('rcptDate').innerText = data.date;
+                document.getElementById('rcptName').innerText = payload.name;
+                document.getElementById('rcptSpecs').innerText = data.specs;
+                document.getElementById('rcptPrice').innerText = payload.price;
+
+                // 500ms (aadha second) ka wait taake text pehle fill ho jaye phir print window khule
+               // Ab sirf form reset hoga, automatic print popup nahi aayega!
+setTimeout(() => {
+    document.getElementById('orderForm').reset();
+}, 500);
+            } else {
+                alert("Error: " + data.error);
+            }
+        })
+        .catch(err => alert("Connection error! Make sure server.js is running."));
+    });
+</script>
+
+</body>
+</html>
