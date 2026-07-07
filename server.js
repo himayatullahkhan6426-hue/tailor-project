@@ -7,12 +7,14 @@ app.use(cors());
 app.use(express.json());
 
 // MySQL Connection (Docker Port 3307 ke saath)
+// MySQL Connection - Docker Internal Network ke liye compatible
 const db = mysql.createConnection({
-    host: '127.0.0.1',
+    // Agar Render (Docker) par chal raha ho to service name 'db' use hoga, warna localhost
+    host: process.env.DATABASE_HOST || 'db', 
     user: 'root',
     password: 'rootpassword',
     database: 'tailor_saas_db',
-    port: 3307
+    port: 3306 // Docker container ke andar ka asli port 3306 hi hota hai
 });
 
 db.connect((err) => {
