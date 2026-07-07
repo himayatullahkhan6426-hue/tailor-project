@@ -106,7 +106,7 @@
             price: document.getElementById('orderPrice').value
         };
 
-        fetch('http://localhost:3000/api/orders', {
+        fetch('https://tailor-project-ausb.onrender.com', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
