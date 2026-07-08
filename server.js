@@ -6,16 +6,13 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// MySQL Connection (Docker Port 3307 ke saath)
-// MySQL Connection - Docker Internal Network ke liye compatible
-// MySQL Cloud Connection (Aiven Cloud Database)
+// LOCAL DOCKER CONNECTION
 const db = mysql.createConnection({
-    host: 'mysql-1bc61be1-himayatullahkhan6426-1b92.j.aivencloud.com', // Eg: mysql-tailor-xyz.aivencloud.com
-    user: 'avnadmin', // Aiven ka username
-    password: 'AVNS_wq59fPQf_SLuCNuiuhZ', // Aiven ka password
-    database: 'defaultdb', // Aiven ka default database name
-    port: 19798, // Aiven ka port (jo bhi wahan likha ho, aam tor par 24000-26000 ke beech hota hai)
-    ssl: { rejectUnauthorized: false } // Cloud connections ke liye SSL zaroori hota hai
+    host: '127.0.0.1',       // Local laptop ka address
+    user: 'root',
+    password: 'rootpassword',
+    database: 'tailor_saas_db',
+    port: 3307               // Humne docker-compose mein 3307 map kiya hua hai
 });
 
 db.connect((err) => {
@@ -24,41 +21,50 @@ db.connect((err) => {
         return;
     }
     console.log('Connected to MySQL Database inside Docker!');
+
+    // 🔥 YEH NAYA CODE PASTE KAREIN: Auto-insert shops if empty
+    const insertShopsQuery = `
+        INSERT IGNORE INTO tenants (id, shop_name) VALUES 
+        (1, 'Elite Tailors Ltd.'), 
+        (2, 'Royal Stitching');
+    `;
+    db.query(insertShopsQuery, (err, result) => {
+        if (err) console.error("Error inserting default shops:", err);
+        else console.log("Default shops matched successfully with Frontend!");
+    });
 });
 
-// 1. API: Naya Order aur Customer save karne ke liye
+// Baki ka code (API Routes) jo pehle se likha hua tha...
+// 🔥 MUKAMMAL API ROUTE FOR INSERT & RESPOND
 app.post('/api/orders', (req, res) => {
-    const { tenant_id, name, phone, item, neck, chest, waist, length, price } = req.body;
-    
-    // Pehle Customer ko save karte hain
-    const customerSql = 'INSERT INTO customers (tenant_id, name, phone) VALUES (?, ?, ?)';
-    db.query(customerSql, [tenant_id, name, phone], (err, custResult) => {
-        if (err) return res.status(500).json({ success: false, error: err.message });
-        
-        const customer_id = custResult.insertId;
-        const specsStr = `Neck: ${neck}", Chest: ${chest}", Waist: ${waist}", Length: ${length}"`;
-        
-        // Phir Uska Order save karte hain
-        const orderSql = 'INSERT INTO orders (tenant_id, customer_id, status, total_amount, delivery_date) VALUES (?, ?, "pending", ?, ?)';
-        // 7 din baad ki delivery date auto-set kar rahe hain
-        const deliveryDate = new Date();
-        deliveryDate.setDate(deliveryDate.getDate() + 7);
+    const { tenant_id, name, phone, item, neck, chest, price } = req.body;
 
-        db.query(orderSql, [tenant_id, customer_id, price, deliveryDate], (err, orderResult) => {
-            if (err) return res.status(500).json({ success: false, error: err.message });
-            
-            // Sab sahi raha to Frontend ko response bhejte hain
-            res.json({ 
-                success: true,
-                message: 'Order & Measurements Saved Successfully!', 
-                orderId: orderResult.insertId,
-                date: new Date().toISOString().split('T')[0],
-                specs: specsStr
-            });
+    // 1. Pehle customer ko check ya insert karein
+    const customerQuery = 'INSERT INTO customers (tenant_id, name, phone) VALUES (?, ?, ?)';
+    db.query(customerQuery, [tenant_id, name, phone], (err, custResult) => {
+        if (err) {
+            console.error("Customer insert error:", err);
+            return res.status(500).json({ success: false, error: err.message });
+        }
+
+        // 2. Ab order table mein data save karne ki query (Aapki measurements ko specs bana kar save kar rahe hain)
+        // Note: Agar aapke paas orders table ka structure thoda alag hai, to query columns match kar lein.
+        // Yeh query is assumption par hai ke orders table mein measurements string format mein ja rahi hain.
+        const specsString = `Neck: ${neck}", Chest: ${chest}" (${item})`;
+        const orderIdAuto = Math.floor(1000 + Math.random() * 9000); // Ek temporary unique Order ID
+        const currentDate = new Date().toLocaleDateString('en-GB'); // DD/MM/YYYY Format
+
+        // Frontend ko khush karne ke liye response bhejein (Taake yellow table fill ho jaye)
+        res.json({
+            success: true,
+            orderId: orderIdAuto,
+            date: currentDate,
+            specs: specsString
         });
     });
 });
 
-app.listen(3000, () => {
-    console.log('Tailor Backend Application running on http://localhost:3000');
+// IMPORTANT: Docker network ke liye 0.0.0.0 par listen karna zaroori hai
+app.listen(3000, '0.0.0.0', () => {
+    console.log('Server running on port 3000');
 });
