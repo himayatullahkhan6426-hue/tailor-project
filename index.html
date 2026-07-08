@@ -5,26 +5,78 @@
     <title>Tailor SaaS Dashboard</title>
     <style>
         body { font-family: Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 20px; color: #1e293b; }
-        .container { max-width: 900px; margin: 0 auto; }
+        .container { max-width: 1100px; margin: 0 auto; }
         header { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .grid { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 20px; }
         .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        h2 { margin-top: 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
-        label { display: block; margin: 10px 0 5px; font-weight: bold; }
-        input, select { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box; }
-        button { background: #2563eb; color: white; border: none; padding: 12px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; }
+        h2 { margin-top: 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; color: #1e293b; font-size: 1.25rem; }
+        label { display: block; margin: 10px 0 5px; font-weight: bold; font-size: 0.85rem; color: #475569; }
+        input, select, textarea { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box; font-size: 0.9rem; }
+        textarea { resize: vertical; height: 60px; }
+        button { background: #2563eb; color: white; border: none; padding: 12px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; font-size: 1rem; }
         button:hover { background: #1d4ed8; }
+        .measurement-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
         
         /* SCREEN PAR RECEIPT DIKHANE KE LIYE */
-        .preview-box { background: #fffde7; border: 2px dashed #f59e0b; padding: 15px; font-family: monospace; border-radius: 4px; margin-top: 15px; }
+        .preview-box { background: #fffde7; border: 2px dashed #f59e0b; padding: 15px; font-family: monospace; border-radius: 4px; margin-top: 15px; color: #000; font-size: 0.85rem; }
         .receipt-header { text-align: center; font-weight: bold; }
+        .receipt-header h3 { margin: 5px 0; }
         .receipt-divider { border-top: 1px dashed black; margin: 10px 0; }
+        .receipt-row { display: flex; justify-content: space-between; margin: 4px 0; }
 
-        /* PRINTING RULE */
+        /* PRINTING RULE FOR 80mm THERMAL PRINTER */
+       /* PRINTING RULE FOR 80mm THERMAL PRINTER - FIXED FOR BLANK PAGE */
         @media print {
-            body * { display: none; }
-            #thermal-receipt, #thermal-receipt * { display: block; }
-            #thermal-receipt { width: 80mm; position: absolute; left: 0; top: 0; padding: 10px; }
+            /* Poori body ko hide nahi karna, sirf un cheezon ko hide karna hai jo receipt ke baahir hain */
+            body {
+                background: white;
+                margin: 0;
+                padding: 0;
+            }
+            .container > header, 
+            .grid > .card:first-child,
+            h2 { 
+                display: none !important; 
+            }
+            
+            /* Receipt card ke gird majood white box ya borders ko gayab karna */
+            .grid {
+                display: block !important;
+            }
+            .card {
+                box-shadow: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+
+            /* Receipt ko print screen par poora dikhana */
+            #thermal-receipt { 
+                display: block !important;
+                width: 80mm !important; 
+                position: absolute; 
+                left: 0; 
+                top: 0; 
+                padding: 0; 
+                margin: 0;
+                border: none !important;
+                background: white !important;
+            }
+            #thermal-receipt * { 
+                display: inline-block;
+                width: 100%;
+            }
+            .receipt-divider { 
+                border-top: 1px dashed black !important; 
+                display: block !important;
+                width: 100% !important;
+            }
+            .receipt-row {
+                display: flex !important;
+            }
+            .receipt-row span {
+                display: inline !important;
+                width: auto !important;
+            }
         }
     </style>
 </head>
@@ -32,61 +84,129 @@
 
 <div class="container">
     <header>
-        <h2>TailorFlow Multi-Tenant SaaS</h2>
-        <span style="background: #dbeafe; color: #2563eb; padding: 5px 10px; border-radius: 20px; font-weight: bold;">Docker DB Live</span>
+        <div>
+            <h2 style="border:none; margin:0; padding:0;">TailorFlow Multi-Tenant SaaS</h2>
+            <small style="color: #64748b;">Cloud Architecture for Retail Tailoring</small>
+        </div>
+        <span style="background: #dbeafe; color: #2563eb; padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 0.85rem;">Docker DB Live</span>
     </header>
 
     <div class="grid">
         <div class="card">
-            <h2>Order & Measurements</h2>
+            <h2>Order & Measurements Entry Form</h2>
             <form id="orderForm">
-                <label>Select Shop (Tenant)</label>
-                <select id="tenantId">
-                    <option value="1">Elite Tailors Ltd.</option>
-                    <option value="2">Royal Stitching</option>
-                </select>
-
-                <label>Customer Name</label>
-                <input type="text" id="custName" placeholder="Ali Khan" required>
-
-                <label>Phone</label>
-                <input type="text" id="custPhone" placeholder="03001234567" required>
-
-                <label>Cloth Type</label>
-                <select id="clothType">
-                    <option value="Premium Suit">Premium Suit</option>
-                    <option value="Slim Fit Shirt">Slim Fit Shirt</option>
-                </select>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                    <div><label>Neck (Inches)</label><input type="number" id="mNeck" value="16"></div>
-                    <div><label>Chest (Inches)</label><input type="number" id="mChest" value="40"></div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div>
+                        <label>Select Shop (Tenant ID)</label>
+                        <select id="tenantId">
+                            <option value="1">Elite Tailors Ltd.</option>
+                            <option value="2">Royal Stitching</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Order Workflow Status</label>
+                        <select id="orderStatus">
+                            <option value="pending">Pending</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="completed">Completed</option>
+                            <option value="delivered">Delivered</option>
+                        </select>
+                    </div>
                 </div>
 
-                <label>Price ($)</label>
-                <input type="number" id="orderPrice" value="150" required>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div>
+                        <label>Customer Name</label>
+                        <input type="text" id="custName" placeholder="Himayat ullah Khan" required>
+                    </div>
+                    <div>
+                        <label>Phone Number</label>
+                        <input type="text" id="custPhone" placeholder="03001234567" required>
+                    </div>
+                </div>
 
-                <button type="submit">Save & Print Receipt</button>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div>
+                        <label>Cloth / Order Item Type</label>
+                        <select id="clothType">
+                            <option value="Shalwar Kameez">Shalwar Kameez</option>
+                            <option value="Three Piece Suit">Three Piece Suit</option>
+                            <option value="Slim Fit Shirt">Slim Fit Shirt</option>
+                            <option value="Formal Trouser">Formal Trouser</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Expected Delivery Date</label>
+                        <input type="date" id="deliveryDate" required>
+                    </div>
+                </div>
+
+                <h3 style="font-size: 1rem; color: #1e293b; margin-top: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;">Body Measurements (Inches)</h3>
+                <div class="measurement-grid">
+                    <div><label>Neck</label><input type="number" step="0.1" id="mNeck" value="16.0"></div>
+                    <div><label>Chest</label><input type="number" step="0.1" id="mChest" value="40.0"></div>
+                    <div><label>Waist</label><input type="number" step="0.1" id="mWaist" value="36.0"></div>
+                    <div><label>Shoulder</label><input type="number" step="0.1" id="mShoulder" value="18.5"></div>
+                    <div><label>Sleeves</label><input type="number" step="0.1" id="mSleeves" value="24.0"></div>
+                    <div><label>Length</label><input type="number" step="0.1" id="mLength" value="42.0"></div>
+                </div>
+
+                <label>Special Stitching Instructions / Notes</label>
+                <textarea id="orderNotes" placeholder="Double pocket, cuff style sleeves, soft collar..."></textarea>
+
+                <h3 style="font-size: 1rem; color: #1e293b; margin-top: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;">Billing Details</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div>
+                        <label>Total Price ($)</label>
+                        <input type="number" id="orderPrice" value="150" required>
+                    </div>
+                    <div>
+                        <label>Advance Paid ($)</label>
+                        <input type="number" id="advancePaid" value="50" required>
+                    </div>
+                </div>
+
+                <button type="submit">Click Me To Save Data &  Make Receipt (it will save data to Database and then it will show that data in receipt section)</button>
             </form>
         </div>
 
         <div class="card">
-            <h2>Thermal Receipt Preview</h2>
+            <h2>Receipt Preview (80mm)</h2>
             <div id="thermal-receipt" class="preview-box">
                 <div class="receipt-header">
-                    <h3>TAILOR SAAS SYSTEM</h3>
-                    <p>Docker Database Terminal</p>
+                    <h3 id="rcptShopName">TAILORFLOW SAAS</h3>
+                    <p style="margin: 2px 0; font-size: 0.75rem;">Multi-Tenant Cloud POS</p>
                 </div>
                 <div class="receipt-divider"></div>
-                <p><strong>Order ID:</strong> #<span id="rcptId">----</span></p>
-                <p><strong>Date:</strong> <span id="rcptDate">--/--/----</span></p>
-                <p><strong>Customer:</strong> <span id="rcptName">Waiting...</span></p>
+                
+                <div class="receipt-row"><span><strong>Order ID:</strong></span><span id="rcptId">#-----</span></div>
+                <div class="receipt-row"><span><strong>Order Date:</strong></span><span id="rcptDate">--/--/----</span></div>
+                <div class="receipt-row"><span><strong>Delivery:</strong></span><span id="rcptDelivery">--/--/----</span></div>
+                <div class="receipt-row"><span><strong>Status:</strong></span><span id="rcptStatus" style="text-transform: uppercase;">----</span></div>
                 <div class="receipt-divider"></div>
-                <p><strong>Specs:</strong> <span id="rcptSpecs">No measurements yet</span></p>
+                
+                <div class="receipt-row"><span><strong>Customer:</strong></span><span id="rcptName">Waiting...</span></div>
+                <div class="receipt-row"><span><strong>Phone:</strong></span><span id="rcptPhone">----------</span></div>
                 <div class="receipt-divider"></div>
-                <p><strong>TOTAL AMOUNT:</strong> $<span id="rcptPrice">0.00</span></p>
+                
+                <div class="receipt-header"><span style="font-size: 0.8rem; letter-spacing: 1px;">MEASUREMENT SUMMARY</span></div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 5px; font-size: 0.8rem;" id="rcptMeasurements">
+                    <div>Neck: --</div><div>Chest: --</div>
+                    <div>Waist: --</div><div>Shoulder: --</div>
+                    <div>Sleeves: --</div><div>Length: --</div>
+                </div>
+                <p style="margin: 5px 0 0 0; font-size: 0.75rem;"><strong>Notes:</strong> <span id="rcptNotes">None</span></p>
                 <div class="receipt-divider"></div>
-                <p style="text-align: center; font-size: 10px;">Data Saved Successfully inside Docker!</p>
+                
+                <div class="receipt-row"><span><strong>Item:</strong></span><span id="rcptItem">----</span></div>
+                <div class="receipt-divider"></div>
+                
+                <div class="receipt-row"><span>Total Price:</span>$<span id="rcptPrice">0.00</span></div>
+                <div class="receipt-row"><span>Advance Paid:</span>$<span id="rcptAdvance">0.00</span></div>
+                <div class="receipt-row" style="font-weight: bold; font-size: 0.95rem;"><span>BALANCE DUE:</span>$<span id="rcptBalance">0.00</span></div>
+                
+                <div class="receipt-divider"></div>
+                <p style="text-align: center; font-size: 10px; margin: 0;">Isolated Secure Data Saved in Docker DB Node.</p>
             </div>
         </div>
     </div>
@@ -96,18 +216,36 @@
     document.getElementById('orderForm').addEventListener('submit', function(e) {
         e.preventDefault();
 
+        const tenantSelect = document.getElementById('tenantId');
+        const shopName = tenantSelect.options[tenantSelect.selectedIndex].text;
+        
+        const price = parseFloat(document.getElementById('orderPrice').value) || 0;
+        const advance = parseFloat(document.getElementById('advancePaid').value) || 0;
+        const balance = price - advance;
+
+        // Backend server ke liye payload structure ready karna
         const payload = {
-            tenant_id: document.getElementById('tenantId').value,
+            tenant_id: tenantSelect.value,
+            status: document.getElementById('orderStatus').value,
             name: document.getElementById('custName').value,
             phone: document.getElementById('custPhone').value,
             item: document.getElementById('clothType').value,
-            neck: document.getElementById('mNeck').value,
-            chest: document.getElementById('mChest').value,
-            price: document.getElementById('orderPrice').value
+            delivery_date: document.getElementById('deliveryDate').value,
+            measurements: {
+                neck: document.getElementById('mNeck').value,
+                chest: document.getElementById('mChest').value,
+                waist: document.getElementById('mWaist').value,
+                shoulder: document.getElementById('mShoulder').value,
+                sleeves: document.getElementById('mSleeves').value,
+                length: document.getElementById('mLength').value
+            },
+            notes: document.getElementById('orderNotes').value,
+            total_price: price,
+            advance_paid: advance
         };
 
-        // Wapas localhost ka link
-fetch('http://localhost:3000/api/orders', {
+        // Node.js Server connection trigger
+        fetch('http://localhost:3000/api/orders', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
@@ -115,23 +253,41 @@ fetch('http://localhost:3000/api/orders', {
         .then(res => res.json())
         .then(data => {
             if(data.success) {
-                // Screen par receipt ka data fill karna
-                document.getElementById('rcptId').innerText = data.orderId;
+                // Receipt Preview text rendering setup
+                document.getElementById('rcptShopName').innerText = shopName.toUpperCase();
+                document.getElementById('rcptId').innerText = '#' + data.orderId;
                 document.getElementById('rcptDate').innerText = data.date;
+                document.getElementById('rcptDelivery').innerText = new Date(payload.delivery_date).toLocaleDateString('en-GB');
+                document.getElementById('rcptStatus').innerText = payload.status;
                 document.getElementById('rcptName').innerText = payload.name;
-                document.getElementById('rcptSpecs').innerText = data.specs;
-                document.getElementById('rcptPrice').innerText = payload.price;
+                document.getElementById('rcptPhone').innerText = payload.phone;
+                document.getElementById('rcptItem').innerText = payload.item;
+                document.getElementById('rcptNotes').innerText = payload.notes || 'None';
+                
+                // Measurements mapping inside the preview template
+                document.getElementById('rcptMeasurements').innerHTML = `
+                    <div>Neck: ${payload.measurements.neck}"</div><div>Chest: ${payload.measurements.chest}"</div>
+                    <div>Waist: ${payload.measurements.waist}"</div><div>Shoulder: ${payload.measurements.shoulder}"</div>
+                    <div>Sleeves: ${payload.measurements.sleeves}"</div><div>Length: ${payload.measurements.length}"</div>
+                `;
 
-                // 500ms (aadha second) ka wait taake text pehle fill ho jaye phir print window khule
-               // Ab sirf form reset hoga, automatic print popup nahi aayega!
-setTimeout(() => {
-    document.getElementById('orderForm').reset();
-}, 500);
+                // Accounts statement updates
+                document.getElementById('rcptPrice').innerText = price.toFixed(2);
+                document.getElementById('rcptAdvance').innerText = advance.toFixed(2);
+                document.getElementById('rcptBalance').innerText = balance.toFixed(2);
+
+                // Print sequence management trigger
+                setTimeout(() => {
+                    window.print();
+                    document.getElementById('orderForm').reset();
+                }, 500);
             } else {
-                alert("Error: " + data.error);
+                alert("Database insertion error: " + data.error);
             }
         })
-        .catch(err => alert("Connection error! Make sure server.js is running."));
+        .catch(err => {
+            alert("Connection error! Make sure your Node backend (server.js) is running.");
+        });
     });
 </script>
 

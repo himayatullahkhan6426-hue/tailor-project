@@ -12,7 +12,7 @@ const db = mysql.createConnection({
     user: 'root',
     password: 'rootpassword',
     database: 'tailor_saas_db',
-    port: 3307               // Humne docker-compose mein 3307 map kiya hua hai
+    port: 3307               // Docker-compose external port mapping
 });
 
 db.connect((err) => {
@@ -22,7 +22,7 @@ db.connect((err) => {
     }
     console.log('Connected to MySQL Database inside Docker!');
 
-    // 🔥 YEH NAYA CODE PASTE KAREIN: Auto-insert shops if empty
+    // Auto-insert shops if empty to sync with frontend dropdown
     const insertShopsQuery = `
         INSERT IGNORE INTO tenants (id, shop_name) VALUES 
         (1, 'Elite Tailors Ltd.'), 
@@ -34,37 +34,65 @@ db.connect((err) => {
     });
 });
 
-// Baki ka code (API Routes) jo pehle se likha hua tha...
-// 🔥 MUKAMMAL API ROUTE FOR INSERT & RESPOND
+// UPGRADED MULTI-TABLE INSERTION API ROUTE
 app.post('/api/orders', (req, res) => {
-    const { tenant_id, name, phone, item, neck, chest, price } = req.body;
+    const { 
+        tenant_id, status, name, phone, item, delivery_date, 
+        measurements, notes, total_price, advance_paid 
+    } = req.body;
 
-    // 1. Pehle customer ko check ya insert karein
+    // STEP 1: Insert or Find Customer
     const customerQuery = 'INSERT INTO customers (tenant_id, name, phone) VALUES (?, ?, ?)';
     db.query(customerQuery, [tenant_id, name, phone], (err, custResult) => {
         if (err) {
             console.error("Customer insert error:", err);
             return res.status(500).json({ success: false, error: err.message });
         }
+        const customerId = custResult.insertId;
 
-        // 2. Ab order table mein data save karne ki query (Aapki measurements ko specs bana kar save kar rahe hain)
-        // Note: Agar aapke paas orders table ka structure thoda alag hai, to query columns match kar lein.
-        // Yeh query is assumption par hai ke orders table mein measurements string format mein ja rahi hain.
-        const specsString = `Neck: ${neck}", Chest: ${chest}" (${item})`;
-        const orderIdAuto = Math.floor(1000 + Math.random() * 9000); // Ek temporary unique Order ID
-        const currentDate = new Date().toLocaleDateString('en-GB'); // DD/MM/YYYY Format
+        // STEP 2: Save Detailed Body Measurements
+        const measureQuery = `
+            INSERT INTO measurements (customer_id, neck, chest, waist, shoulder, sleeves, length, notes) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+        const mValues = [
+            customerId, measurements.neck, measurements.chest, measurements.waist, 
+            measurements.shoulder, measurements.sleeves, measurements.length, notes
+        ];
 
-        // Frontend ko khush karne ke liye response bhejein (Taake yellow table fill ho jaye)
-        res.json({
-            success: true,
-            orderId: orderIdAuto,
-            date: currentDate,
-            specs: specsString
+        db.query(measureQuery, mValues, (err, measResult) => {
+            if (err) {
+                console.error("Measurements database insertion error:", err);
+                return res.status(500).json({ success: false, error: err.message });
+            }
+
+            // STEP 3: Create Order log
+            const orderQuery = `
+                INSERT INTO orders (tenant_id, customer_id, cloth_type, total_price, advance_paid, status, delivery_date) 
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            `;
+            db.query(orderQuery, [tenant_id, customerId, item, total_price, advance_paid, status, delivery_date], (err, orderResult) => {
+                if (err) {
+                    console.error("Order workflow initialization error:", err);
+                    return res.status(500).json({ success: false, error: err.message });
+                }
+
+                // Generates response mapping with absolute data consistency
+                const finalOrderId = orderResult.insertId;
+                const currentDate = new Date().toLocaleDateString('en-GB'); // DD/MM/YYYY
+
+                // Response returning to fill the frontend layout perfectly
+                res.json({
+                    success: true,
+                    orderId: finalOrderId,
+                    date: currentDate
+                });
+            });
         });
     });
 });
 
-// IMPORTANT: Docker network ke liye 0.0.0.0 par listen karna zaroori hai
+// Listen interface binding for microservice containers
 app.listen(3000, '0.0.0.0', () => {
     console.log('Server running on port 3000');
 });
